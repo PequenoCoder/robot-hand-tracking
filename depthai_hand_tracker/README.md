@@ -16,16 +16,16 @@ pip install -r requirements.txt
 python test_oak.py
 ```
 
-### 3. Run Hand Tracking
+### 3. Run Robot Hand Control
 
 ```bash
-# Basic hand tracking
-python capture_joint_angles.py
+# Control the robotic hand
+python robot_hand.py
 ```
 
 ## Files
 
-- `capture_joint_angles.py` - Main program for robotic hand control
+- `robot_hand.py` - Main program for robotic hand control
 - `HandTracker.py` - Core hand tracking (host mode)
 - `HandTrackerEdge.py` - Hand tracking (edge mode - faster)
 - `HandTrackerRenderer.py` - Visualization renderer

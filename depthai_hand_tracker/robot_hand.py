@@ -398,40 +398,63 @@ def find_arduino_port():
     return None
 
 def main():
-    # Initialize Arduino if enabled
+    print("=" * 60)
+    print("Robot Hand Control - Starting...")
+    print("=" * 60)
+    
+    # Step 1: Connect to Arduino FIRST
     global SERIAL_PORT
-    enable_motors = ENABLE_MOTORS  # Use local copy
+    enable_motors = ENABLE_MOTORS
     ser = None
     
-    if enable_motors:
-        if SERIAL_PORT is None:
-            SERIAL_PORT = find_arduino_port()
-            if SERIAL_PORT is None:
-                print("⚠ Arduino not found - Motor control disabled")
-                enable_motors = False
+    print("\n[1/2] Searching for Arduino...")
+    
+    if not enable_motors:
+        print("⚠ Motor control is disabled in config")
+        print("   Set ENABLE_MOTORS = True to control the robot hand")
+        return
+    
+    # Find Arduino port if not specified
+    if SERIAL_PORT is None:
+        SERIAL_PORT = find_arduino_port()
+    
+    if SERIAL_PORT is None:
+        print("❌ Arduino not found!")
+        print("\nTroubleshooting:")
+        print("  1. Is Arduino connected via USB?")
+        print("  2. Is the Arduino sketch uploaded?")
+        print("  3. Check Device Manager (Windows) or ls /dev/tty* (Linux)")
+        return
+    
+    # Connect to Arduino
+    if DEBUG_SERIAL:
+        print(f"[DEBUG] Serial debugging ENABLED")
+    
+    try:
+        print(f"   Connecting to {SERIAL_PORT}...")
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+        time.sleep(2)
+        print(f"✓ Arduino connected on {SERIAL_PORT}")
         
-        if enable_motors:
+        # Clear any startup messages from Arduino
+        lines_cleared = 0
+        while ser.in_waiting:
+            line = ser.readline()
+            lines_cleared += 1
             if DEBUG_SERIAL:
-                print(f"[DEBUG] Serial debugging ENABLED - will show all TX/RX")
-            try:
-                ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
-                time.sleep(2)
-                print(f"✓ Connected to Arduino on {SERIAL_PORT}")
-                if DEBUG_SERIAL:
-                    print(f"[DEBUG] Serial config: {BAUD_RATE} baud, timeout=1s")
-                # Clear any startup messages from Arduino
-                lines_cleared = 0
-                while ser.in_waiting:
-                    line = ser.readline()
-                    lines_cleared += 1
-                    if DEBUG_SERIAL:
-                        print(f"[SERIAL RX] Startup: {line.decode('utf-8', errors='ignore').strip()}")
-                if DEBUG_SERIAL and lines_cleared > 0:
-                    print(f"[DEBUG] Cleared {lines_cleared} startup message(s)")
-            except Exception as e:
-                print(f"⚠ Arduino connection failed: {e}")
-                enable_motors = False
-                ser = None
+                print(f"[SERIAL RX] Startup: {line.decode('utf-8', errors='ignore').strip()}")
+        if DEBUG_SERIAL and lines_cleared > 0:
+            print(f"[DEBUG] Cleared {lines_cleared} startup message(s)")
+    except Exception as e:
+        print(f"❌ Arduino connection failed: {e}")
+        print("\nTroubleshooting:")
+        print("  1. Close any other programs using the Arduino (Arduino IDE, Serial Monitor)")
+        print("  2. Try unplugging and reconnecting the Arduino")
+        print("  3. Check the COM port is correct")
+        return
+    
+    # Step 2: Initialize camera AFTER successful Arduino connection
+    print("\n[2/2] Initializing hand tracker...")
     
     # Initialize hand tracker
     tracker = HandTracker(
@@ -456,7 +479,13 @@ def main():
         buffer_size=FILTER_BUFFER_SIZE
     )
     
-    print(f"✓ Hand Tracker ready - Press 'q' or ESC to quit\n")
+    print("✓ Hand tracker initialized")
+    print("\n" + "=" * 60)
+    print("ROBOT HAND CONTROL ACTIVE")
+    print("=" * 60)
+    print("Show your hand to the camera to control the robot")
+    print("Press 'q' or ESC to quit")
+    print("=" * 60 + "\n")
     
     # Debug counter
     serial_cmd_count = 0

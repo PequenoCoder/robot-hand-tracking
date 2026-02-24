@@ -234,15 +234,17 @@ python3 demo.py -e -g
 # Activate virtual environment
 source .venv/bin/activate
 
-# Run joint angle capture
-python3 capture_joint_angles.py
+# Run robot hand control
+python3 robot_hand.py
 ```
 
 **This will:**
+- Connect to Arduino first (required)
+- Initialize camera after successful Arduino connection
 - Track your hand in real-time
 - Calculate joint angles for each finger
+- Send commands to control the robotic hand
 - Display angles on screen
-- Output to console (can be sent to Arduino via serial)
 
 **Joint angles captured per finger:**
 - **PIP angle** - Interphalangeal joint
@@ -278,7 +280,7 @@ sudo usermod -a -G dialout $USER
 
 ### 3. Configure Serial Port in Python
 
-Edit `capture_joint_angles.py` to match your Arduino port:
+Edit `robot_hand.py` to match your Arduino port:
 
 ```python
 # Find this line and update if needed
@@ -289,7 +291,7 @@ serial_port = '/dev/ttyACM0'  # or /dev/ttyUSB0
 
 ```bash
 source .venv/bin/activate
-python3 capture_joint_angles.py
+python3 robot_hand.py
 ```
 
 Your robotic hand should now mirror your real hand movements!
@@ -414,7 +416,7 @@ python3 demo.py -e -s --internal_fps 25 --lm_model lite
 For running without monitor (SSH only), modify the code to save angles to file instead of displaying:
 
 ```bash
-# Comment out cv2.imshow() lines in capture_joint_angles.py
+# Comment out cv2.imshow() lines in robot_hand.py
 # Write angles to file or send directly to serial
 ```
 
@@ -433,7 +435,7 @@ Description=Hand Tracker Service
 After=network.target
 
 [Service]
-ExecStart=/home/pi/robot-hand-tracking/depthai_hand_tracker/.venv/bin/python3 /home/pi/robot-hand-tracking/depthai_hand_tracker/capture_joint_angles.py
+ExecStart=/home/pi/robot-hand-tracking/depthai_hand_tracker/.venv/bin/python3 /home/pi/robot-hand-tracking/depthai_hand_tracker/robot_hand.py
 WorkingDirectory=/home/pi/robot-hand-tracking/depthai_hand_tracker
 StandardOutput=inherit
 StandardError=inherit
@@ -471,7 +473,7 @@ source .venv/bin/activate
 python3 demo.py -e
 
 # Robotic hand control
-python3 capture_joint_angles.py
+python3 robot_hand.py
 
 # Test camera
 python3 test_oak.py
