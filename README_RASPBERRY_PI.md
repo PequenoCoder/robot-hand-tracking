@@ -422,35 +422,22 @@ For running without monitor (SSH only), modify the code to save angles to file i
 
 ### Auto-start on Boot
 
-Create a systemd service:
+**Quick Setup:**
 
 ```bash
-sudo nano /etc/systemd/system/handtracker.service
+cd ~/robot-hand-tracking/depthai_hand_tracker
+chmod +x install_service.sh
+sudo bash install_service.sh
+sudo systemctl start robot_hand
 ```
 
-Add:
-```ini
-[Unit]
-Description=Hand Tracker Service
-After=network.target
+**For detailed instructions and troubleshooting, see: [`AUTOSTART_SETUP.md`](AUTOSTART_SETUP.md)**
 
-[Service]
-ExecStart=/home/pi/robot-hand-tracking/depthai_hand_tracker/.venv/bin/python3 /home/pi/robot-hand-tracking/depthai_hand_tracker/robot_hand.py
-WorkingDirectory=/home/pi/robot-hand-tracking/depthai_hand_tracker
-StandardOutput=inherit
-StandardError=inherit
-Restart=always
-User=pi
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable:
-```bash
-sudo systemctl enable handtracker.service
-sudo systemctl start handtracker.service
-```
+The installer will:
+- ✅ Create systemd service with correct paths
+- ✅ Enable auto-start on boot
+- ✅ Show useful management commands
+- ✅ Set up automatic restart on failure
 
 ---
 
