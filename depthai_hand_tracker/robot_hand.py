@@ -5,11 +5,27 @@ import cv2
 import serial
 import serial.tools.list_ports
 import time
+import sys
 from scipy import signal
 from collections import deque
 from HandTrackerRenderer import HandTrackerRenderer
 from HandTracker import HandTracker  # Use Host mode for better compatibility
 from hand_pose_fixes import mcp_flexion_signed_deg, build_stable_hand_frame
+
+# ANSI color codes for terminal output
+class Colors:
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    BOLD = '\033[1m'
+    END = '\033[0m'
+
+def print_colored(text, color=''):
+    """Print colored text to terminal"""
+    print(f"{color}{text}{Colors.END}")
+    sys.stdout.flush()
 
 # ===== Motor Control Configuration =====
 SERIAL_PORT = "COM3"  # Arduino port
@@ -398,24 +414,24 @@ def find_arduino_port():
     return None
 
 def main():
-    print("=" * 60)
-    print("Robot Hand Control - Starting...")
-    print("=" * 60)
+    print_colored("=" * 60, Colors.CYAN + Colors.BOLD)
+    print_colored("🤖 ROBOT HAND CONTROL - STARTING...", Colors.CYAN + Colors.BOLD)
+    print_colored("=" * 60, Colors.CYAN + Colors.BOLD)
     
     # Step 1: Connect to Arduino FIRST (wait indefinitely)
     global SERIAL_PORT
     enable_motors = ENABLE_MOTORS
     ser = None
     
-    print("\n[1/2] Searching for Arduino...")
+    print_colored("\n[1/2] 🔍 Searching for Arduino...", Colors.YELLOW + Colors.BOLD)
     
     if not enable_motors:
-        print("⚠ Motor control is disabled in config")
-        print("   Set ENABLE_MOTORS = True to control the robot hand")
+        print_colored("⚠ Motor control is disabled in config", Colors.RED)
+        print_colored("   Set ENABLE_MOTORS = True to control the robot hand", Colors.RED)
         return
     
     if DEBUG_SERIAL:
-        print(f"[DEBUG] Serial debugging ENABLED")
+        print_colored("[DEBUG] Serial debugging ENABLED", Colors.BLUE)
     
     # Wait indefinitely for Arduino
     try:
@@ -431,21 +447,21 @@ def main():
             
             if SERIAL_PORT is None:
                 if connection_attempt == 1:
-                    print("⏳ Waiting for Arduino...")
-                    print("   Please connect Arduino via USB")
-                    print("   (Press Ctrl+C to cancel)")
+                    print_colored("⏳ Waiting for Arduino...", Colors.YELLOW)
+                    print_colored("   Please connect Arduino via USB", Colors.YELLOW)
+                    print_colored("   (Press Ctrl+C to cancel)", Colors.YELLOW)
                 else:
-                    print(f"   Still searching... ({connection_attempt})")
+                    print_colored(f"   Still searching... (attempt {connection_attempt})", Colors.YELLOW)
                 time.sleep(2)
                 continue
             
             # Try to connect
             try:
                 if connection_attempt == 1:
-                    print(f"   Found Arduino on {SERIAL_PORT}, connecting...")
+                    print_colored(f"   📡 Found Arduino on {SERIAL_PORT}, connecting...", Colors.CYAN)
                 ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
                 time.sleep(2)
-                print(f"✓ Arduino connected on {SERIAL_PORT}")
+                print_colored(f"✓ Arduino connected on {SERIAL_PORT}", Colors.GREEN + Colors.BOLD)
                 
                 # Clear any startup messages from Arduino
                 lines_cleared = 0
@@ -453,23 +469,23 @@ def main():
                     line = ser.readline()
                     lines_cleared += 1
                     if DEBUG_SERIAL:
-                        print(f"[SERIAL RX] Startup: {line.decode('utf-8', errors='ignore').strip()}")
+                        print_colored(f"[SERIAL RX] Startup: {line.decode('utf-8', errors='ignore').strip()}", Colors.BLUE)
                 if DEBUG_SERIAL and lines_cleared > 0:
-                    print(f"[DEBUG] Cleared {lines_cleared} startup message(s)")
+                    print_colored(f"[DEBUG] Cleared {lines_cleared} startup message(s)", Colors.BLUE)
                     
             except Exception as e:
-                print(f"⚠ Connection attempt failed: {e}")
-                print(f"   Retrying in 2 seconds...")
+                print_colored(f"⚠ Connection attempt failed: {e}", Colors.RED)
+                print_colored(f"   Retrying in 2 seconds...", Colors.YELLOW)
                 ser = None
                 SERIAL_PORT = None  # Reset to search again
                 time.sleep(2)
     
     except KeyboardInterrupt:
-        print("\n\n✓ Cancelled by user")
+        print_colored("\n\n✓ Cancelled by user", Colors.GREEN)
         return
     
     # Step 2: Initialize camera AFTER successful Arduino connection
-    print("\n[2/2] Initializing hand tracker...")
+    print_colored("\n[2/2] 📷 Initializing hand tracker...", Colors.YELLOW + Colors.BOLD)
     
     # Initialize hand tracker
     tracker = HandTracker(
@@ -494,13 +510,13 @@ def main():
         buffer_size=FILTER_BUFFER_SIZE
     )
     
-    print("✓ Hand tracker initialized")
-    print("\n" + "=" * 60)
-    print("ROBOT HAND CONTROL ACTIVE")
-    print("=" * 60)
-    print("Show your hand to the camera to control the robot")
-    print("Press 'q' or ESC to quit")
-    print("=" * 60 + "\n")
+    print_colored("✓ Hand tracker initialized", Colors.GREEN + Colors.BOLD)
+    print_colored("\n" + "=" * 60, Colors.GREEN + Colors.BOLD)
+    print_colored("🤖 ROBOT HAND CONTROL ACTIVE ✋", Colors.GREEN + Colors.BOLD)
+    print_colored("=" * 60, Colors.GREEN + Colors.BOLD)
+    print_colored("👋 Show your hand to the camera to control the robot", Colors.CYAN)
+    print_colored("⌨️  Press 'q' or ESC to quit", Colors.YELLOW)
+    print_colored("=" * 60 + "\n", Colors.GREEN + Colors.BOLD)
     
     # Debug counter
     serial_cmd_count = 0
@@ -693,15 +709,17 @@ def main():
                 break
     
     except KeyboardInterrupt:
-        print("\n✓ Shutting down...")
+        print_colored("\n\n🛑 Shutting down...", Colors.YELLOW + Colors.BOLD)
     finally:
         # Cleanup
         if enable_motors and ser:
+            print_colored("   Resetting servos to safe position...", Colors.YELLOW)
             ser.write(b"0,0,0,0,0\n")  # Safe position
             time.sleep(0.1)
             ser.close()
         renderer.exit()
         tracker.exit()
+        print_colored("\n✓ Robot Hand Control stopped\n", Colors.GREEN)
 
 if __name__ == "__main__":
     main()

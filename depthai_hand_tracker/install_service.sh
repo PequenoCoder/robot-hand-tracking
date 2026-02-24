@@ -35,24 +35,24 @@ SERVICE_FILE="/tmp/robot_hand.service"
 cat > $SERVICE_FILE << EOF
 [Unit]
 Description=Robot Hand Control Service
-After=network.target multi-user.target
+After=graphical.target
 
 [Service]
 Type=simple
 User=$ACTUAL_USER
 WorkingDirectory=$SCRIPT_DIR
-ExecStart=$SCRIPT_DIR/.venv/bin/python3 $SCRIPT_DIR/robot_hand.py
+ExecStart=/usr/bin/lxterminal --title="Robot Hand Control" -e "$SCRIPT_DIR/.venv/bin/python3 $SCRIPT_DIR/robot_hand.py"
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
-# Environment variables (if needed)
+# Environment variables
 Environment="DISPLAY=:0"
 Environment="XAUTHORITY=$USER_HOME/.Xauthority"
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical.target
 EOF
 
 echo "✓ Service file created"

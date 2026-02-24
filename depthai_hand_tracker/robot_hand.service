@@ -1,20 +1,20 @@
 [Unit]
 Description=Robot Hand Control Service
-After=network.target multi-user.target
+After=graphical.target
 
 [Service]
 Type=simple
 User=pi
 WorkingDirectory=/home/pi/robot-hand-tracking/depthai_hand_tracker
-ExecStart=/home/pi/robot-hand-tracking/depthai_hand_tracker/.venv/bin/python3 /home/pi/robot-hand-tracking/depthai_hand_tracker/robot_hand.py
+ExecStart=/usr/bin/lxterminal --title="Robot Hand Control" -e "/home/pi/robot-hand-tracking/depthai_hand_tracker/.venv/bin/python3 /home/pi/robot-hand-tracking/depthai_hand_tracker/robot_hand.py"
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
-# Environment variables (if needed)
+# Environment variables
 Environment="DISPLAY=:0"
 Environment="XAUTHORITY=/home/pi/.Xauthority"
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical.target
