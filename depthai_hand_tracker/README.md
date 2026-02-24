@@ -1,50 +1,45 @@
-# Hand Tracker for Robotic Hand Control
+# DepthAI Hand Tracker
 
 Real-time hand tracking using DepthAI OAK camera for robotic hand control.
 
 ## Quick Start
 
-### 1. Install Dependencies
-
 ```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-### 2. Test Camera
-
-```bash
+# Test camera
 python test_oak.py
-```
 
-### 3. Run Robot Hand Control
-
-```bash
-# Control the robotic hand
+# Run robot hand control
 python robot_hand.py
 ```
 
-## Files
+## 📖 Full Documentation
 
-- `robot_hand.py` - Main program for robotic hand control
-- `HandTracker.py` - Core hand tracking (host mode)
-- `HandTrackerEdge.py` - Hand tracking (edge mode - faster)
-- `HandTrackerRenderer.py` - Visualization renderer
-- `mediapipe_utils.py` - MediaPipe utilities
-- `hand_pose_fixes.py` - Hand pose corrections
-- `FPS.py` - FPS counter
-- `test_oak.py` - Camera testing utility
-- `requirements.txt` - Python dependencies
-- `MOTOR_CONTROL_GUIDE.md` - Motor control documentation
+**See the main README for complete setup and usage instructions:**
 
-## Folders
+→ **[../README.md](../README.md)**
 
-- `models/` - Neural network blob files
-- `motors1_5/` - Arduino motor control code
+Includes:
+- Complete setup guides (Windows & Raspberry Pi)
+- Hardware requirements & wiring
+- Arduino/motor control setup
+- Auto-start configuration
+- Troubleshooting
+- Performance tips
+- Command reference
 
-## Setup Guide
+## Core Files
 
-For complete Raspberry Pi setup instructions, see: `../README_RASPBERRY_PI.md`
+- `robot_hand.py` - **Main program** ⭐
+- `HandTracker.py` - Hand tracking (host mode)
+- `HandTrackerEdge.py` - Hand tracking (edge mode)
+- `HandTrackerRenderer.py` - Visualization
+- `test_oak.py` - Camera test utility
+- `models/` - Neural network models
+- `motors1_5/` - Arduino firmware
 
 ## License
 
-See `LICENSE.txt`
+See [LICENSE.txt](LICENSE.txt)
