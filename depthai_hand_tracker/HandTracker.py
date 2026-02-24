@@ -127,7 +127,7 @@ class HandTracker:
         self.use_handedness_average = use_handedness_average
         self.single_hand_tolerance_thresh = single_hand_tolerance_thresh
 
-        self.device = dai.Device(dai.OpenVINO.Version.VERSION_2021_4, usb2Mode=True)
+        self.device = dai.Device()
 
         if input_src == None or input_src == "rgb" or input_src == "rgb_laconic":
             # Note that here (in Host mode), specifying "rgb_laconic" has no effect
