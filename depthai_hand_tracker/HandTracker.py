@@ -87,7 +87,6 @@ class HandTracker:
                 ):
 
         self.pd_model = pd_model
-        print(f"Palm detection blob : {self.pd_model}")
         if use_lm:
             if lm_model == "full":
                 self.lm_model = LANDMARK_MODEL_FULL
@@ -97,18 +96,15 @@ class HandTracker:
                 self.lm_model = LANDMARK_MODEL_SPARSE
             else:
                 self.lm_model = lm_model
-            print(f"Landmark blob       : {self.lm_model}")
         self.pd_score_thresh = pd_score_thresh
         self.pd_nms_thresh = pd_nms_thresh
         self.use_lm = use_lm
         self.lm_score_thresh = lm_score_thresh
         if not use_lm and solo:
-            print("Warning: solo mode desactivated when not using landmarks")
             self.solo = False
         else:
             self.solo = solo
         if self.solo:
-            print("In Solo mode, # of landmark model threads is forced to 1")
             self.lm_nb_threads = 1
         else:
             assert lm_nb_threads in [1, 2]
@@ -134,15 +130,12 @@ class HandTracker:
             # Color camera frames are systematically transferred to the host
             self.input_type = "rgb" # OAK* internal color camera
             self.internal_fps = internal_fps 
-            print(f"Internal camera FPS set to: {self.internal_fps}")
             if resolution == "full":
                 self.resolution = (1920, 1080)
             elif resolution == "ultra":
                 self.resolution = (3840, 2160)
             else:
-                print(f"Error: {resolution} is not a valid resolution !")
-                sys.exit()
-            print("Sensor resolution:", self.resolution)
+                sys.exit(f"Error: {resolution} is not a valid resolution!")
 
             if xyz:
                 # Check if the device supports stereo
@@ -150,7 +143,7 @@ class HandTracker:
                 if dai.CameraBoardSocket.LEFT in cameras and dai.CameraBoardSocket.RIGHT in cameras:
                     self.xyz = True
                 else:
-                    print("Warning: depth unavailable on this device, 'xyz' argument is ignored")
+                    pass
 
             self.video_fps = self.internal_fps # Used when saving the output in a video file. Should be close to the real fps
             
@@ -168,7 +161,6 @@ class HandTracker:
                 self.frame_size = self.img_w
                 self.crop_w = 0
 
-            print(f"Internal camera image size: {self.img_w} x {self.img_h} - crop_w:{self.crop_w} pad_h: {self.pad_h}")
 
         elif input_src.endswith('.jpg') or input_src.endswith('.png') :
             self.input_type= "image"
@@ -183,10 +175,9 @@ class HandTracker:
             self.video_fps = int(self.cap.get(cv2.CAP_PROP_FPS))
             self.img_w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             self.img_h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            print("Video FPS:", self.video_fps)
         
         if self.input_type != "rgb":
-            print(f"Original frame size: {self.img_w}x{self.img_h}")
+            pass
             if self.crop:
                 self.frame_size = min(self.img_w, self.img_h)
             else:
@@ -202,7 +193,6 @@ class HandTracker:
             if self.pad_h: print("Padding on height :", self.pad_h)
                      
             if self.crop: self.img_h = self.img_w = self.frame_size
-            print(f"Frame working size: {self.img_w}x{self.img_h}")
         
 
         # Create SSD anchors 
@@ -210,12 +200,10 @@ class HandTracker:
         # self.pd_input_length = 192 # Palm detection
         self.anchors = mpu.generate_handtracker_anchors(self.pd_input_length, self.pd_input_length)
         self.nb_anchors = self.anchors.shape[0]
-        print(f"{self.nb_anchors} anchors have been created")
 
         # Define and start pipeline
         usb_speed = self.device.getUsbSpeed()
         self.device.startPipeline(self.create_pipeline())
-        print(f"Pipeline started - USB speed: {str(usb_speed).split('.')[-1]}")
 
         # Define data queues 
         if self.input_type == "rgb":
@@ -260,14 +248,12 @@ class HandTracker:
         
 
     def create_pipeline(self):
-        print("Creating pipeline...")
         # Start defining a pipeline
         pipeline = dai.Pipeline()
         pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2021_4)
 
         if self.input_type == "rgb":
             # ColorCamera
-            print("Creating Color Camera...")
             cam = pipeline.createColorCamera()
             if self.resolution[0] == 1920:
                 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
@@ -303,12 +289,10 @@ class HandTracker:
             cam.video.link(cam_out.input)
 
             if self.xyz:
-                print("Creating MonoCameras, Stereo and SpatialLocationCalculator nodes...")
                 # For now, RGB needs fixed focus to properly align with depth.
                 # The value used during calibration should be used here
                 calib_data = self.device.readCalibration()
                 calib_lens_pos = calib_data.getLensPosition(dai.CameraBoardSocket.RGB)
-                print(f"RGB calibration lens position: {calib_lens_pos}")
                 cam.initialControl.setManualFocus(calib_lens_pos)
 
                 mono_resolution = dai.MonoCameraProperties.SensorResolution.THE_400_P
@@ -351,7 +335,6 @@ class HandTracker:
                 spatial_calc_config_in.out.link(spatial_location_calculator.inputConfig)
 
         # Define palm detection model
-        print("Creating Palm Detection Neural Network...")
         pd_nn = pipeline.createNeuralNetwork()
         pd_nn.setBlobPath(self.pd_model)
         # Palm detection input        
@@ -375,7 +358,6 @@ class HandTracker:
         
          # Define hand landmark model
         if self.use_lm:
-            print(f"Creating Hand Landmark Neural Network ({'1 thread' if self.lm_nb_threads == 1 else '2 threads'})...")         
             lm_nn = pipeline.createNeuralNetwork()
             lm_nn.setBlobPath(self.lm_model)
             lm_nn.setNumInferenceThreads(self.lm_nb_threads)
@@ -389,7 +371,6 @@ class HandTracker:
             lm_out.setStreamName("lm_out")
             lm_nn.out.link(lm_out.input)
             
-        print("Pipeline created.")
         return pipeline        
    
 

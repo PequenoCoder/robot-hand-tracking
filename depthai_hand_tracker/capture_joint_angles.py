@@ -404,25 +404,19 @@ def main():
     ser = None
     
     if enable_motors:
-        print("=" * 60)
-        print("Hand Tracker with Motor Control")
-        print("=" * 60)
-
         if SERIAL_PORT is None:
-            print("Searching for Arduino...")
             SERIAL_PORT = find_arduino_port()
             if SERIAL_PORT is None:
-                print("WARNING: Could not find Arduino! Disabling motor control.")
+                print("⚠ Arduino not found - Motor control disabled")
                 enable_motors = False
         
         if enable_motors:
-            print(f"Using port: {SERIAL_PORT}")
             if DEBUG_SERIAL:
                 print(f"[DEBUG] Serial debugging ENABLED - will show all TX/RX")
             try:
                 ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
                 time.sleep(2)
-                print("✓ Connected to Arduino")
+                print(f"✓ Connected to Arduino on {SERIAL_PORT}")
                 if DEBUG_SERIAL:
                     print(f"[DEBUG] Serial config: {BAUD_RATE} baud, timeout=1s")
                 # Clear any startup messages from Arduino
@@ -435,8 +429,7 @@ def main():
                 if DEBUG_SERIAL and lines_cleared > 0:
                     print(f"[DEBUG] Cleared {lines_cleared} startup message(s)")
             except Exception as e:
-                print(f"ERROR connecting to Arduino: {e}")
-                print("Continuing without motor control...")
+                print(f"⚠ Arduino connection failed: {e}")
                 enable_motors = False
                 ser = None
     
@@ -463,21 +456,7 @@ def main():
         buffer_size=FILTER_BUFFER_SIZE
     )
     
-    print("\nCapturing Joint Angles for Robotic Hand Control")
-    print("=" * 70)
-    print(f"Butterworth Filter: {FILTER_CUTOFF_HZ} Hz cutoff, order={FILTER_ORDER}, buffer={FILTER_BUFFER_SIZE}")
-    print(f"Rate Limiting: Max {MAX_MOTOR_CHANGE_PER_UPDATE}° change per update")
-    if enable_motors:
-        print(f"Motor control ENABLED (updating at {UPDATE_RATE_HZ} Hz)")
-        if DEBUG_SERIAL:
-            print(f"Serial debug ENABLED - watching for transmission issues")
-    else:
-        print("Motor control DISABLED")
-    
-    
-    print("Press 'q' or ESC to quit")
-    print("=" * 70)
-    print()
+    print(f"✓ Hand Tracker ready - Press 'q' or ESC to quit\n")
     
     # Debug counter
     serial_cmd_count = 0
@@ -606,44 +585,20 @@ def main():
                         cv2.putText(frame, motor_text, (10, y_offset), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
                         
-                        # Console output - clear and formatted
-                        print(f"\n{'='*80}")
-                        print(f"{hand.label.upper()} {CONTROL_FINGER.upper()} FINGER -> MOTORS")
-                        print(f"{'='*80}")
-                        print(f"{'Joint':<15} {'Motor':<8} {'Joint Angle':<15} {'Motor Angle':<15} {'Status':<10}")
-                        print(f"{'-'*80}")
-                        
-                        if CONTROL_FINGER in filtered_angles:
-                            finger_data = filtered_angles[CONTROL_FINGER]
-                            for joint_name, motor_num in JOINT_TO_MOTOR.items():
-                                if motor_num > 0 and joint_name in finger_data:
-                                    joint_angle = finger_data[joint_name]
-                                    motor_angle = motor_angles[motor_num - 1]
-                                    
-                                    # Determine status
-                                    if motor_angle >= -10:
-                                        status = "EXTENDED"
-                                    elif motor_angle <= -60:
-                                        status = "BENT"
-                                    else:
-                                        status = "PARTIAL"
-                                    
-                                    # Format joint name nicely
-                                    joint_display = joint_name.replace('_', ' ').title()
-                                    print(f"{joint_display:<15} M{motor_num:<7} {joint_angle:6.1f}°{'':<8} {motor_angle:6.1f}°{'':<8} {status:<10}")
-                                    
-                                    # Debug: Show raw MCP angle range
-                                    if DEBUG_ANGLES and joint_name == 'mcp_flexion' and USE_ROBUST_MCP:
-                                        print(f"{'[DEBUG]':<15} Raw MCP flexion: {joint_angle:6.1f}° (open ≈ 0-10, fist ≈ 40-70)")
-                        print(f"{'='*80}\n")
+                        # Minimal console output (only if DEBUG_ANGLES enabled)
+                        if DEBUG_ANGLES:
+                            print(f"{hand.label} {CONTROL_FINGER}: ", end="")
+                            for motor_num in range(1, 6):
+                                if motor_num - 1 < len(motor_angles):
+                                    print(f"M{motor_num}:{motor_angles[motor_num - 1]:5.1f}° ", end="")
+                            print()
             else:
                 # No hand detected
                 if hand_detected_last_frame:
                     angle_filter.reset()
                     hand_detected_last_frame = False
-                    print("\n⚠ Hand lost - holding last position...")
                     if DEBUG_SERIAL:
-                        print(f"[DEBUG] Last position: {held_motor_angles}")
+                        print(f"[DEBUG] Hand lost, last position: {held_motor_angles}")
                 
                 # Hold last position or reset after timeout
                 if HOLD_LAST_POSITION:
@@ -658,9 +613,10 @@ def main():
                                 if DEBUG_SERIAL:
                                     print(f"[SERIAL TX] Reset: 0,0,0,0,0")
                             except Exception as e:
-                                print(f"[SERIAL ERROR] Failed to reset: {e}")
+                                print(f"⚠ Serial error: {e}")
                             held_motor_angles = [0.0, 0.0, 0.0, 0.0, 0.0]
-                            print(f"\n⏱ Timeout ({RESET_TIMEOUT_SECONDS}s) - resetting to extended position")
+                            if DEBUG_SERIAL:
+                                print(f"[DEBUG] Timeout ({RESET_TIMEOUT_SECONDS}s) - reset to extended")
                             last_hand_detected_time = time.time()  # Reset timer
                     else:
                         # Hold last known position
@@ -673,7 +629,8 @@ def main():
                                 if DEBUG_SERIAL:
                                     print(f"[SERIAL TX] Hold ({bytes_written} bytes): {cmd.strip()}")
                             except Exception as e:
-                                print(f"[SERIAL ERROR] Failed to hold: {e}")
+                                if DEBUG_SERIAL:
+                                    print(f"[SERIAL ERROR] Failed to hold: {e}")
                 else:
                     # Immediate reset when hand lost
                     if enable_motors and ser:
@@ -692,17 +649,15 @@ def main():
                 break
     
     except KeyboardInterrupt:
-        print("\n\nInterrupted by user")
+        print("\n✓ Shutting down...")
     finally:
         # Cleanup
-        print("\nCleaning up...")
         if enable_motors and ser:
             ser.write(b"0,0,0,0,0\n")  # Safe position
             time.sleep(0.1)
             ser.close()
         renderer.exit()
         tracker.exit()
-        print("Done!")
 
 if __name__ == "__main__":
     main()
