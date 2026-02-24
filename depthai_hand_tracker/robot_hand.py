@@ -402,7 +402,7 @@ def main():
     print("Robot Hand Control - Starting...")
     print("=" * 60)
     
-    # Step 1: Connect to Arduino FIRST
+    # Step 1: Connect to Arduino FIRST (wait indefinitely)
     global SERIAL_PORT
     enable_motors = ENABLE_MOTORS
     ser = None
@@ -414,43 +414,58 @@ def main():
         print("   Set ENABLE_MOTORS = True to control the robot hand")
         return
     
-    # Find Arduino port if not specified
-    if SERIAL_PORT is None:
-        SERIAL_PORT = find_arduino_port()
-    
-    if SERIAL_PORT is None:
-        print("❌ Arduino not found!")
-        print("\nTroubleshooting:")
-        print("  1. Is Arduino connected via USB?")
-        print("  2. Is the Arduino sketch uploaded?")
-        print("  3. Check Device Manager (Windows) or ls /dev/tty* (Linux)")
-        return
-    
-    # Connect to Arduino
     if DEBUG_SERIAL:
         print(f"[DEBUG] Serial debugging ENABLED")
     
+    # Wait indefinitely for Arduino
     try:
-        print(f"   Connecting to {SERIAL_PORT}...")
-        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
-        time.sleep(2)
-        print(f"✓ Arduino connected on {SERIAL_PORT}")
-        
-        # Clear any startup messages from Arduino
-        lines_cleared = 0
-        while ser.in_waiting:
-            line = ser.readline()
-            lines_cleared += 1
-            if DEBUG_SERIAL:
-                print(f"[SERIAL RX] Startup: {line.decode('utf-8', errors='ignore').strip()}")
-        if DEBUG_SERIAL and lines_cleared > 0:
-            print(f"[DEBUG] Cleared {lines_cleared} startup message(s)")
-    except Exception as e:
-        print(f"❌ Arduino connection failed: {e}")
-        print("\nTroubleshooting:")
-        print("  1. Close any other programs using the Arduino (Arduino IDE, Serial Monitor)")
-        print("  2. Try unplugging and reconnecting the Arduino")
-        print("  3. Check the COM port is correct")
+        connection_attempt = 0
+        while ser is None:
+            connection_attempt += 1
+            
+            # Find Arduino port if not specified
+            if SERIAL_PORT is None:
+                search_port = find_arduino_port()
+                if search_port:
+                    SERIAL_PORT = search_port
+            
+            if SERIAL_PORT is None:
+                if connection_attempt == 1:
+                    print("⏳ Waiting for Arduino...")
+                    print("   Please connect Arduino via USB")
+                    print("   (Press Ctrl+C to cancel)")
+                else:
+                    print(f"   Still searching... ({connection_attempt})")
+                time.sleep(2)
+                continue
+            
+            # Try to connect
+            try:
+                if connection_attempt == 1:
+                    print(f"   Found Arduino on {SERIAL_PORT}, connecting...")
+                ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+                time.sleep(2)
+                print(f"✓ Arduino connected on {SERIAL_PORT}")
+                
+                # Clear any startup messages from Arduino
+                lines_cleared = 0
+                while ser.in_waiting:
+                    line = ser.readline()
+                    lines_cleared += 1
+                    if DEBUG_SERIAL:
+                        print(f"[SERIAL RX] Startup: {line.decode('utf-8', errors='ignore').strip()}")
+                if DEBUG_SERIAL and lines_cleared > 0:
+                    print(f"[DEBUG] Cleared {lines_cleared} startup message(s)")
+                    
+            except Exception as e:
+                print(f"⚠ Connection attempt failed: {e}")
+                print(f"   Retrying in 2 seconds...")
+                ser = None
+                SERIAL_PORT = None  # Reset to search again
+                time.sleep(2)
+    
+    except KeyboardInterrupt:
+        print("\n\n✓ Cancelled by user")
         return
     
     # Step 2: Initialize camera AFTER successful Arduino connection
